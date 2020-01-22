@@ -1,0 +1,8 @@
+clang++
+-I.
+-I/usr/include/c++/9.2.0
+-stdlib=libc++
+-fPIC
+%h -x
+%h c++-header
+%cpp -std=c++11
