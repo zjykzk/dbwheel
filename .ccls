@@ -1,6 +1,7 @@
 clang++
 -I.
 -I/usr/include/c++/9.2.0
+-I./third_party/googletest/googletest/include
 -stdlib=libc++
 -fPIC
 %h -x
