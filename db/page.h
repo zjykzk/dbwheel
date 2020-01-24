@@ -17,6 +17,8 @@ struct leafPageElement;
 
 class Page {
  private:
+  friend class Node;
+
   const std::string type();
 
   const uint32_t count() { return count_; }
@@ -38,6 +40,11 @@ class Page {
   uint16_t count_;
   uint32_t overflow_;
   char ptr_[0];
+
+  static const size_t kPageHeaderSize;
+  static const size_t kBranchPageElementSize;
+  static const size_t kLeafPageElementSize;
+  static const size_t kMinKeys;
 };
 
 }  // namespace dbwheel

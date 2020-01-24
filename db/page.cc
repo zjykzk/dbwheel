@@ -2,6 +2,7 @@
 //
 
 #include "db/page.h"
+#include <cstddef>
 
 #include <sstream>
 
@@ -79,5 +80,10 @@ branchPageElement* Page::branchPageElementOf(uint16_t index) {
 leafPageElement* Page::leafPageElementOf(uint16_t index) {
   return reinterpret_cast<leafPageElement*>(this->ptr_) + index;
 }
+
+const size_t Page::kPageHeaderSize = offsetof(Page, ptr_);
+const size_t Page::kBranchPageElementSize = sizeof(branchPageElement);
+const size_t Page::kLeafPageElementSize = sizeof(leafPageElement);
+const size_t Page::kMinKeys = 2;
 
 }  // namespace dbwheel
