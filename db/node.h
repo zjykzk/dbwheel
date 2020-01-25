@@ -24,10 +24,13 @@ class Node {
   ~Node();
 
   vector<Node*> split(size_t pageSize, double fillPercent);
-  void put(const string& oldKey, const string& newKey, const string& value, pgid id, uint32_t flags);
+  void put(const string& oldKey, const string& newKey, const string& value, uint64_t id, uint32_t flags);
   void del(const string& key);
+  void readPage(Page* page);
+  void writePage(Page* page);
 
-  int count() { return inodes_.size(); }
+  const int count() const { return inodes_.size(); }
+  const uint64_t pageId() const { return pageId_; }
   const Node* const parent() const { return parent_; }
   const vector<inode*> inodes() const { return inodes_; }
   const vector<Node*> children() const { return children_; }
@@ -37,8 +40,11 @@ class Node {
   bool sizeLessThan(size_t v);
   size_t elementSize();
   size_t splitIndex(size_t threshold);
+  void writeLeaf(Page* page);
+  void writeBranch(Page* page);
 
   Node* parent_;
+  uint64_t pageId_;
   vector<Node*> children_;
   vector<inode*> inodes_;
   bool isLeaf_;

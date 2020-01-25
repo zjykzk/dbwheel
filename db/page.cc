@@ -6,50 +6,12 @@
 
 #include <sstream>
 
+#include "db/page_ele.h"
+
 namespace dbwheel {
-
-
-struct branchPageElement {
-  std::string key();
-
-  uint32_t pos;
-  uint32_t ksize;
-  pgid pgid_;
-};
-
-std::string branchPageElement::key() {
-  return std::string((reinterpret_cast<char*>(this) + this->pos), this->ksize);
-}
-
-
-struct leafPageElement {
-  std::string key();
-  std::string value();
-
-  uint32_t flags;
-  uint32_t pos;
-  uint32_t ksize;
-  uint32_t vsize;
-};
-
-
-std::string leafPageElement::key() {
-  return std::string((reinterpret_cast<char*>(this) + this->pos), this->ksize);
-}
-
-std::string leafPageElement::value() {
-  return std::string((reinterpret_cast<char*>(this) + this->pos + this->ksize), this->vsize);
-}
 
 static ssize_t kLeafPageElementSize = sizeof(leafPageElement);
 static ssize_t kBranchPageElementSize = sizeof(branchPageElement);
-
-enum {
-  kBranchPageFlag = 0x01,
-  kLeafPageFlag = 0x02,
-  kMetaPageFlag = 0x04,
-  kFreeListPageFlag = 0x10
-};
 
 const std::string Page::type() {
   if ((flags_ & kBranchPageFlag) != 0) {

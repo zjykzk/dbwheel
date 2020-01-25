@@ -9,8 +9,6 @@
 
 namespace dbwheel {
 
-using pgid = uint64_t;
-
 struct branchPageElement;
 
 struct leafPageElement;
@@ -22,6 +20,11 @@ class Page {
   const std::string type();
 
   const uint32_t count() { return count_; }
+  void count(uint32_t c) { count_ = c; }
+  const uint16_t flags() { return flags_; }
+  void flags(uint16_t flags) { flags_ = flags; }
+  const uint64_t id() { return id_; }
+  void id(uint64_t id) { id_ = id; }
 
   branchPageElement* branchPageElements() {
     return reinterpret_cast<branchPageElement*>(this->ptr_);
@@ -35,7 +38,7 @@ class Page {
 
   inline leafPageElement* leafPageElementOf(uint16_t index);
 
-  pgid id_;
+  uint64_t id_;
   uint16_t flags_;
   uint16_t count_;
   uint32_t overflow_;
@@ -45,6 +48,14 @@ class Page {
   static const size_t kBranchPageElementSize;
   static const size_t kLeafPageElementSize;
   static const size_t kMinKeys;
+
+  enum {
+    kBranchPageFlag = 0x01,
+    kLeafPageFlag = 0x02,
+    kMetaPageFlag = 0x04,
+    kFreeListPageFlag = 0x10
+  };
+
 };
 
 }  // namespace dbwheel
