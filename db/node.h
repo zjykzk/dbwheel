@@ -7,7 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "db/node_cache.h"
 #include "db/page.h"
+#include "db/page_free.h"
 
 namespace dbwheel {
 
@@ -18,8 +20,8 @@ struct inode;
 
 class Node {
  public:
-  Node(): parent_(nullptr), isLeaf_(false) {}
-
+  Node(): Node(nullptr, 0, false) {}
+  Node(Node* parent, uint64_t pageID, bool isLeaf): parent_(parent), pageID_(pageID), isLeaf_(isLeaf) {}
   Node(const vector<inode*>& inodes, bool isLeaf): parent_(nullptr), inodes_(inodes), isLeaf_(isLeaf) {}
   ~Node();
 
@@ -28,24 +30,36 @@ class Node {
   bool del(const string& key);
   void readPage(Page* page);
   void writePage(Page* page);
-  void reblance(size_t pageSize);
+  void reblance(size_t pageSize, NodeCache& nodeCache, PageFree& pageFree);
 
+  const bool isLeaf() const { return isLeaf_; }
   const int count() const { return inodes_.size(); }
-  const uint64_t pageId() const { return pageId_; }
+  const uint64_t pageID() const { return pageID_; }
   const Node* const parent() const { return parent_; }
-  const vector<inode*> inodes() const { return inodes_; }
-  const vector<Node*> children() const { return children_; }
+  const vector<inode*>& inodes() const { return inodes_; }
+  const vector<Node*>& children() const { return children_; }
+  void children(const vector<Node*>& children) { children_ = children; }
 
  private:
   std::pair<Node*, Node*> splitTwo(size_t pageSize, double fillPercent);
   bool sizeLessThan(size_t v);
   size_t elementSize();
   size_t splitIndex(size_t threshold);
+  size_t sizeInPage();
   void writeLeaf(Page* page);
   void writeBranch(Page* page);
+  void collapse(NodeCache& nodeCache, PageFree& pageFree);
+  void removeChild(Node* n);
+  Node* prevSilbing();
+  Node* nextSilbing();
+  const string& key() const;
+  inode* del0(const string& key);
+
+  int minKeys() { return isLeaf_ ? 1 : 2; }
 
   Node* parent_;
-  uint64_t pageId_;
+  uint64_t pageID_;
+  // children cache
   vector<Node*> children_;
   vector<inode*> inodes_;
   bool isLeaf_;

@@ -13,8 +13,7 @@
 
 namespace dbwheel {
 
-class InodeComp {
- public:
+struct InodeComp {
   bool operator() (const inode* i, const string& key) {
     return i->key < key;
   }
@@ -57,14 +56,25 @@ void Node::put(
 
 bool Node::del(const string& key) {
 
-  auto pos = lower_bound(inodes_.begin(), inodes_.end(), key, InodeComp());
-
-  auto ok = pos != inodes_.end();
+  auto i = del0(key);
+  bool ok = i != nullptr;
   if (ok) {
-    inodes_.erase(pos);
+    delete i;
   }
 
   return ok;
+}
+
+inode* Node::del0(const string& key) {
+
+  inode* i = nullptr;
+  auto pos = lower_bound(inodes_.begin(), inodes_.end(), key, InodeComp());
+  if (pos != inodes_.end() && (*pos)->key == key) {
+    i = *pos;
+    inodes_.erase(pos);
+  }
+
+  return i;
 }
 
 vector<Node*> Node::split(size_t pageSize, double fillPercent) {
@@ -159,7 +169,7 @@ size_t Node::splitIndex(size_t threshold) {
 void Node::readPage(Page* page) {
 
   isLeaf_ = (page->flags() & Page::kLeafPageFlag) > 0;
-  pageId_ = page->id();
+  pageID_ = page->id();
 
   uint32_t c = page->count();
   inodes_.reserve(c);
@@ -180,7 +190,7 @@ void Node::readPage(Page* page) {
 void Node::writePage(Page* page) {
 
   page->flags(isLeaf_ ? Page::kLeafPageFlag : Page::kBranchPageFlag);
-  page->id(pageId_);
+  page->id(pageID_);
 
   int inodeCount = inodes_.size();
   ASSERTM(inodeCount < 0xFFFF, "inode count overflow");
@@ -235,6 +245,109 @@ void Node::writeBranch(Page* page) {
 
     elt++;
   }
+}
+
+void Node::reblance(size_t pageSize, NodeCache& nodeCache, PageFree& pageFree) {
+
+  if (sizeInPage() > pageSize/4 && inodes_.size() > minKeys()) {
+    return;
+  }
+
+  if (parent_ == nullptr) {
+    if (!isLeaf_ && inodes_.size() == 1) {
+      collapse(nodeCache, pageFree);
+    }
+    return;
+  }
+
+  Node* toBeMerged;
+  Node* target;
+  vector<Node*>::iterator it;
+
+  if (inodes_.empty()) {
+    toBeMerged = this;
+    goto FREE;
+  }
+
+  it = std::find(parent_->children_.begin(), parent_->children_.end(), this);
+  ASSERTM(it != parent_->children_.end(), "BUG: current node not in the parent's children list");
+
+  if (it == parent_->children_.begin()) {
+    target = this;
+    toBeMerged = *(it + 1);
+  } else {
+    target = *(it - 1);
+    toBeMerged = this;
+  }
+
+  for (auto i : toBeMerged->inodes_) {
+    auto n = nodeCache.get(i->pageID);
+    if (n == nullptr) {
+      continue;
+    }
+
+    n->parent_->removeChild(n);
+    n->parent_ = target;
+    target->children_.push_back(n);
+  }
+
+  target->inodes_.insert(target->inodes_.end(), toBeMerged->inodes_.begin(), toBeMerged->inodes_.end());
+
+FREE:
+  parent_->del0(toBeMerged->key());
+  parent_->removeChild(toBeMerged);
+  nodeCache.remove(toBeMerged->pageID_);
+  pageFree.free(toBeMerged->pageID_);
+  toBeMerged->inodes_.clear();
+
+  // prevent field parent_'s value to being chaos since delete this when toBeMerged == this
+  Node* parent = parent_;
+  delete toBeMerged;
+
+  parent->reblance(pageSize, nodeCache, pageFree);
+}
+
+void Node::removeChild(Node* n) {
+  children_.erase(std::remove(children_.begin(), children_.end(), n));
+}
+
+size_t Node::sizeInPage() {
+
+  size_t s = Page::kPageHeaderSize;
+  size_t elsz = elementSize();
+
+  for (auto i : inodes_) {
+    s += elsz + inodeSizeInPage(i);
+  }
+
+  return s;
+}
+
+void Node::collapse(NodeCache& nodeCache, PageFree& pageFree) {
+
+  Node* child = nodeCache.get(inodes_[0]->pageID);
+  ASSERTM(child != nullptr, "child is null");
+
+  isLeaf_ = child->isLeaf_;
+  inodes_.swap(child->inodes_);
+  children_.swap(child->children_);
+
+  for (auto i : inodes_) {
+    auto n = nodeCache.get(i->pageID);
+    if (n != nullptr) {
+      n->parent_ = this;
+    }
+  }
+
+  // avoid delete self twice
+  child->children_.clear();
+  nodeCache.remove(child->pageID_);
+  pageFree.free(child->pageID_);
+  delete child;
+}
+
+inline const string& Node::key() const {
+  return inodes_[0]->key;
 }
 
 }  // namespace dbwheel

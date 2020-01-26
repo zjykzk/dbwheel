@@ -1,4 +1,4 @@
-OPT=-I./ -I/usr/include/c++/9.2.0 -fPIC -std=c++11 -Werror
+OPT=-g -I./ -I/usr/include/c++/9.2.0 -fPIC -std=c++11 -Werror
 OPT_TEST=$(OPT) -I./third_party/googletest/googletest/include
 LINK_TEST=./third_party/googletest/googletest/build/lib/libgtest.a -lpthread
 CXX=g++

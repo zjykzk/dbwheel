@@ -2,41 +2,44 @@
 //
 #include "gtest/gtest.h"
 
-#include "db/node.h"
-#include "db/page.h"
 #include "db/inode.h"
+#include "db/node.h"
+#include "db/node_cache_mock.h"
+#include "db/page.h"
+#include "db/page_free_mock.h"
 
 namespace dbwheel {
 
 using std::string;
 
-TEST(NodeTest, putAndDel) {
+TEST(TestNode, putAndDel) {
 
   Node node;
+  string value = "v";
 
-  string oldKey = "old";
-  string newKey = "new";
-  string value = "value";
-
-  // insert "new"
-  node.put(oldKey, newKey, value, 1, 1);
+  node.put("1", "1", value, 1, 1);
   EXPECT_EQ(1, node.count());
 
-  // replace "new" with "old"
-  node.put(newKey, oldKey, value, 1, 1);
+  node.put("1", "2", value, 1, 1);
   EXPECT_EQ(1, node.count());
+  auto in = node.inodes()[0];
+  ASSERT_EQ("2", in->key);
 
-  // insert "other new"
-  newKey = "other new";
-  node.put("new old", newKey, value, 1, 1);
+  node.put("3", "3", value, 1, 1);
+  EXPECT_EQ(2, node.count());
+  auto in1 = node.inodes()[0];
+  auto in2 = node.inodes()[1];
+  ASSERT_EQ("2", in1->key);
+  ASSERT_EQ("3", in2->key);
 
+  node.del("4");
   EXPECT_EQ(2, node.count());
 
-  node.del(oldKey);
+  node.del("2");
   EXPECT_EQ(1, node.count());
 }
 
-TEST(NodeTest, split) {
+TEST(TestNode, split) {
 
   string key10(10, 'k'), value10(10, 'v');
   string key20(20, 'k'), value20(20, 'v');
@@ -68,7 +71,7 @@ TEST(NodeTest, split) {
   ASSERT_EQ(2, node.parent()->children().size());
 }
 
-TEST(NodeTest, readWritePage) {
+TEST(TestNode, readWritePage) {
 
   char buf[1<<20];
   Page* page = reinterpret_cast<Page*>(buf);
@@ -122,6 +125,135 @@ TEST(NodeTest, readWritePage) {
     ASSERT_EQ(k2, in2->key);
     ASSERT_EQ(v2, in2->value);
   }
+}
+
+TEST(TestNode, noReblance) {
+
+  MockPageFree pageFree;
+  MockNodeCache nodeCache;
+
+  Node b;
+  b.put("1", "1", "1", 1, 1);
+  b.put("2", "2", "2", 1, 1);
+  b.put("3", "3", "3", 1, 1);
+  b.reblance(10000, nodeCache, pageFree);
+
+  ASSERT_EQ(nullptr, b.parent());
+  ASSERT_EQ(3, b.count());
+
+  Node l({},  true);
+  l.put("1", "1", "1", 1, 1);
+  l.reblance(10000, nodeCache, pageFree);
+}
+
+TEST(TestNode, reblanceCollapse) {
+
+  MockPageFree pageFree;
+  MockNodeCache nodeCache;
+  Node b;
+  b.put("1", "1", "1", 1, 1);
+
+  Node* b1 = new Node(&b, 1, true);
+  b1->put("2", "2", "2v", 2, 1);
+  b1->put("3", "3", "3v", 3, 1);
+
+  nodeCache.cache[1] = b1;
+
+  b.reblance(1, nodeCache, pageFree);
+
+  auto ins = b.inodes();
+  ASSERT_EQ(2, ins.size());
+  auto i1 = ins[0];
+  ASSERT_EQ("2", i1->key);
+  ASSERT_EQ("2v", i1->value);
+  auto i2 = ins[1];
+  ASSERT_EQ("3", i2->key);
+  ASSERT_EQ("3v", i2->value);
+
+  ASSERT_EQ(0, nodeCache.cache.count(1));
+  ASSERT_EQ(1, pageFree.freed[0]);
+
+  ASSERT_TRUE(b.isLeaf());
+}
+
+TEST(TestNode, reblanceMergeToPrev) {
+
+  MockPageFree pageFree;
+  MockNodeCache nodeCache;
+  Node b;
+  b.put("1", "1", "1", 1, 1);
+  b.put("2", "2", "2", 2, 1);
+
+  Node* b1 = new Node(&b, 1, true);
+  b1->put("11", "11", "11v", 3, 1);
+
+  Node* b2 = new Node(&b, 2, true);
+  b2->put("2", "2", "21v", 4, 1);
+
+  b.children({b1, b2});
+
+  nodeCache.cache[1] = b1;
+  nodeCache.cache[2] = b2;
+
+  b2->reblance(10000, nodeCache, pageFree);
+
+  ASSERT_TRUE(b.isLeaf());
+  ASSERT_EQ(0, b.children().size());
+
+  auto ins = b.inodes();
+  ASSERT_EQ(2, ins.size());
+  auto i1 = ins[0];
+  ASSERT_EQ("11", i1->key);
+  ASSERT_EQ("11v", i1->value);
+  auto i2 = ins[1];
+  ASSERT_EQ("2", i2->key);
+  ASSERT_EQ("21v", i2->value);
+
+  ASSERT_EQ(0, nodeCache.cache.count(1));
+  ASSERT_EQ(0, nodeCache.cache.count(2));
+  ASSERT_EQ(2, pageFree.freed[0]);
+  ASSERT_EQ(1, pageFree.freed[1]);
+
+}
+
+TEST(TestNode, reblanceMergeToSelf) {
+
+  MockPageFree pageFree;
+  MockNodeCache nodeCache;
+  Node b;
+  b.put("1", "1", "1", 1, 1);
+  b.put("2", "2", "2", 2, 1);
+
+  Node* b1 = new Node(&b, 1, true);
+  b1->put("11", "11", "11v", 3, 1);
+
+  Node* b2 = new Node(&b, 2, true);
+  b2->put("2", "2", "21v", 4, 1);
+
+  b.children({b1, b2});
+
+  nodeCache.cache[1] = b1;
+  nodeCache.cache[2] = b2;
+
+  b1->reblance(10000, nodeCache, pageFree);
+
+  ASSERT_TRUE(b.isLeaf());
+  ASSERT_EQ(0, b.children().size());
+
+  auto ins = b.inodes();
+  ASSERT_EQ(2, ins.size());
+  auto i1 = ins[0];
+  ASSERT_EQ("11", i1->key);
+  ASSERT_EQ("11v", i1->value);
+  auto i2 = ins[1];
+  ASSERT_EQ("2", i2->key);
+  ASSERT_EQ("21v", i2->value);
+
+  ASSERT_EQ(0, nodeCache.cache.count(1));
+  ASSERT_EQ(0, nodeCache.cache.count(2));
+  ASSERT_EQ(2, pageFree.freed[0]);
+  ASSERT_EQ(1, pageFree.freed[1]);
+
 }
 
 }  // namespace dbwheel

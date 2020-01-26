@@ -3,13 +3,15 @@
 #ifndef DB_INODE_H_
 #define DB_INODE_H_
 
+#include <string>
+
 namespace dbwheel {
 
 struct inode {
   uint32_t flags;
   uint64_t pageID;
-  string key;
-  string value;
+  std::string key;
+  std::string value;
 };
 
 }  // namespace dbwheel
