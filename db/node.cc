@@ -55,13 +55,16 @@ void Node::put(
   n->value = value;
 }
 
-void Node::del(const string& key) {
+bool Node::del(const string& key) {
 
   auto pos = lower_bound(inodes_.begin(), inodes_.end(), key, InodeComp());
 
-  if (pos != inodes_.end()) {
+  auto ok = pos != inodes_.end();
+  if (ok) {
     inodes_.erase(pos);
   }
+
+  return ok;
 }
 
 vector<Node*> Node::split(size_t pageSize, double fillPercent) {

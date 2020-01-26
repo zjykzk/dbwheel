@@ -25,9 +25,10 @@ class Node {
 
   vector<Node*> split(size_t pageSize, double fillPercent);
   void put(const string& oldKey, const string& newKey, const string& value, uint64_t id, uint32_t flags);
-  void del(const string& key);
+  bool del(const string& key);
   void readPage(Page* page);
   void writePage(Page* page);
+  void reblance(size_t pageSize);
 
   const int count() const { return inodes_.size(); }
   const uint64_t pageId() const { return pageId_; }
