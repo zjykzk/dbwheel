@@ -14,6 +14,10 @@ struct branchPageElement;
 struct leafPageElement;
 
 class Page {
+ public:
+  Page(uint16_t id, uint32_t overflow): id_(id), overflow_(overflow) {}
+  const uint64_t id() { return id_; }
+
  private:
   friend class Node;
 
@@ -23,7 +27,6 @@ class Page {
   void count(uint32_t c) { count_ = c; }
   const uint16_t flags() { return flags_; }
   void flags(uint16_t flags) { flags_ = flags; }
-  const uint64_t id() { return id_; }
   void id(uint64_t id) { id_ = id; }
 
   branchPageElement* branchPageElements() {

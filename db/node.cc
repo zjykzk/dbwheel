@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <sstream>
 
 #include "db/assert.h"
 #include "db/debug.h"
@@ -19,15 +20,19 @@ struct InodeComp {
   }
 };
 
+static inline void releaseMemOfNode(const vector<Node*>& nodes) {
+  for (auto n : nodes) {
+    delete n;
+  }
+}
+
 Node::~Node() {
 
   for(auto i : inodes_) {
     delete i;
   }
 
-  for (auto n : children_) {
-    delete n;
-  }
+  releaseMemOfNode(children_);
 }
 
 void Node::put(
@@ -347,7 +352,68 @@ void Node::collapse(NodeCache& nodeCache, PageFree& pageFree) {
 }
 
 inline const string& Node::key() const {
-  return inodes_[0]->key;
+  return key_ == "" ? inodes_[0]->key : key_;
+}
+
+Node* Node::spill(size_t pageSize, double fillPercent, PageFree& pageFree, PageAlloc& pageAlloc) {
+
+  if (spilled_) {
+    return this;
+  }
+
+  std::sort(
+      children_.begin(), children_.end(),
+      [](Node* c1, Node* c2) { return c1->key() < c2->key(); });
+
+  // cannot use loop, since the children can be modified since the split-merge operation
+  for (size_t i = 0; i < children_.size(); i++) {
+    auto c = children_[i];
+    c->spill(pageSize, fillPercent, pageFree, pageAlloc);
+  }
+
+  // clear children
+  children_.clear();
+
+  for (auto n : split(pageSize, fillPercent)) {
+    if (n->pageID_ > 0) {
+      pageFree.free(n->pageID_);
+    }
+
+    Page* page = pageAlloc.alloc(pageSize, sizeInPage() / pageSize + 1);
+    
+    n->pageID_ = page->id();
+    n->writePage(page);
+    n->spilled_ = true;
+
+    if (n->parent_ != nullptr) {
+      if (n->key_ == "") {
+        n->key_ = n->inodes_[0]->key;
+      }
+
+      n->parent_->put(n->key_, n->inodes_[0]->key, "", n->pageID_, 0);
+    }
+  }
+
+  // root node spilted, so new root generated, do store it
+  if (parent_ != nullptr && parent_->pageID_ == 0) {
+    // avoid spill children again
+    parent_->children_.clear();
+    return parent_->spill(pageSize, fillPercent, pageFree, pageAlloc);
+  }
+
+  return this;
+}
+
+const string Node::toString() {
+
+  std::stringstream s;
+  s << "pageID:[" << pageID_ << "],is leaf:[" << isLeaf_ << "], inodes:[";
+  for (auto i : inodes_) {
+    s << "key=" << i->key << ",value=" << i->value << ",";
+  }
+  s << "],children count:[" << children_.size() << "]";
+
+  return s.str();
 }
 
 }  // namespace dbwheel

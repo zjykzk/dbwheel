@@ -6,6 +6,7 @@
 #include "db/node.h"
 #include "db/node_cache_mock.h"
 #include "db/page.h"
+#include "db/page_alloc_mock.h"
 #include "db/page_free_mock.h"
 
 namespace dbwheel {
@@ -254,6 +255,85 @@ TEST(TestNode, reblanceMergeToSelf) {
   ASSERT_EQ(2, pageFree.freed[0]);
   ASSERT_EQ(1, pageFree.freed[1]);
 
+}
+
+TEST(TestNode, spill) {
+
+  Node* root = new Node(nullptr, 1, false);
+  root->put("1", "1", "1", 2, 0);
+  root->put("2", "2", "2", 3, 0);
+  Node* l1 = new Node(root, 2, true);
+  Node* l2 = new Node(root, 3, true);
+  root->children({l1, l2});
+
+  l1->put("1", "1", "1", 2, 0);
+  l1->put("11", "11", "11", 2, 0);
+  l1->put("12", "12", "12", 2, 0);
+  l1->put("13", "13", "13", 2, 0);
+
+  l2->put("2", "2", "2", 3, 0);
+  l2->put("21", "21", "21", 3, 0);
+  l2->put("22", "22", "22", 3, 0);
+  l2->put("23", "23", "23", 3, 0);
+
+  MockPageAlloc pageAlloc(4);
+  MockPageFree pageFree;
+
+  Node* newRoot = root->spill(40, 0.5, pageFree, pageAlloc);
+  auto ins = newRoot->inodes();
+  ASSERT_EQ(2, ins.size());
+  auto in0 = ins[0];
+  ASSERT_EQ("1", in0->key);
+  ASSERT_EQ("", in0->value);
+  ASSERT_EQ(8, in0->pageID);
+
+  auto in1 = ins[1];
+  ASSERT_EQ("2", in1->key);
+  ASSERT_EQ("", in1->value);
+  ASSERT_EQ(9, in1->pageID);
+
+  auto p = pageAlloc.alloced[in0->pageID];
+  Node n;
+  n.readPage(p);
+  auto ins1 = n.inodes();
+  ASSERT_EQ(2, ins1.size());
+  auto in10 = ins1[0];
+  ASSERT_EQ("1", in10->key);
+  ASSERT_EQ("", in10->value);
+  ASSERT_EQ(4, in10->pageID);
+  auto in11 = ins1[1];
+  ASSERT_EQ("12", in11->key);
+  ASSERT_EQ("", in11->value);
+  ASSERT_EQ(5, in11->pageID);
+
+  p = pageAlloc.alloced[in1->pageID];
+  Node n2;
+  n2.readPage(p);
+  auto ins2 = n2.inodes();
+  ASSERT_EQ(2, ins2.size());
+  auto in20 = ins2[0];
+  ASSERT_EQ("2", in20->key);
+  ASSERT_EQ("", in20->value);
+  ASSERT_EQ(6, in20->pageID);
+  auto in21 = ins2[1];
+  ASSERT_EQ("22", in21->key);
+  ASSERT_EQ("", in21->value);
+  ASSERT_EQ(7, in21->pageID);
+
+  p = pageAlloc.alloced[in21->pageID];
+  Node n3;
+  n3.readPage(p);
+  ASSERT_TRUE(n3.isLeaf());
+  auto ins3 = n3.inodes();
+  ASSERT_EQ(2, ins3.size());
+  auto in30 = ins3[0];
+  ASSERT_EQ("22", in30->key);
+  ASSERT_EQ("22", in30->value);
+  ASSERT_EQ(in21->pageID, in30->pageID);
+  auto in31 = ins3[1];
+  ASSERT_EQ("23", in31->key);
+  ASSERT_EQ("23", in31->value);
+  ASSERT_EQ(in21->pageID, in31->pageID);
 }
 
 }  // namespace dbwheel

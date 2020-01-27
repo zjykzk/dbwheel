@@ -9,6 +9,7 @@
 
 #include "db/node_cache.h"
 #include "db/page.h"
+#include "db/page_alloc.h"
 #include "db/page_free.h"
 
 namespace dbwheel {
@@ -21,8 +22,8 @@ struct inode;
 class Node {
  public:
   Node(): Node(nullptr, 0, false) {}
-  Node(Node* parent, uint64_t pageID, bool isLeaf): parent_(parent), pageID_(pageID), isLeaf_(isLeaf) {}
-  Node(const vector<inode*>& inodes, bool isLeaf): parent_(nullptr), inodes_(inodes), isLeaf_(isLeaf) {}
+  Node(Node* parent, uint64_t pageID, bool isLeaf): parent_(parent), pageID_(pageID), isLeaf_(isLeaf), spilled_(false) {}
+  Node(const vector<inode*>& inodes, bool isLeaf): parent_(nullptr), inodes_(inodes), isLeaf_(isLeaf), spilled_(false) {}
   ~Node();
 
   vector<Node*> split(size_t pageSize, double fillPercent);
@@ -31,6 +32,7 @@ class Node {
   void readPage(Page* page);
   void writePage(Page* page);
   void reblance(size_t pageSize, NodeCache& nodeCache, PageFree& pageFree);
+  Node* spill(size_t pageSize, double fillPercent, PageFree& pageFree, PageAlloc& pageAlloc);
 
   const bool isLeaf() const { return isLeaf_; }
   const int count() const { return inodes_.size(); }
@@ -57,12 +59,18 @@ class Node {
 
   int minKeys() { return isLeaf_ ? 1 : 2; }
 
+  const string toString();
+
   Node* parent_;
   uint64_t pageID_;
-  // children cache
+  // children cache, used by spilling
   vector<Node*> children_;
   vector<inode*> inodes_;
   bool isLeaf_;
+  string key_;
+
+  // flag
+  bool spilled_;
 };
 
 }  // namespace dbwheel
