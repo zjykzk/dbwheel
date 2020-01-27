@@ -68,9 +68,6 @@ class Node {
   vector<inode*> inodes_;
   bool isLeaf_;
   string key_;
-
-  // flag
-  bool spilled_;
 };
 
 }  // namespace dbwheel

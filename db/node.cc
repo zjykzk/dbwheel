@@ -357,21 +357,13 @@ inline const string& Node::key() const {
 
 Node* Node::spill(size_t pageSize, double fillPercent, PageFree& pageFree, PageAlloc& pageAlloc) {
 
-  if (spilled_) {
-    return this;
-  }
-
-  std::sort(
-      children_.begin(), children_.end(),
-      [](Node* c1, Node* c2) { return c1->key() < c2->key(); });
-
-  // cannot use loop, since the children can be modified since the split-merge operation
-  for (size_t i = 0; i < children_.size(); i++) {
-    auto c = children_[i];
-    c->spill(pageSize, fillPercent, pageFree, pageAlloc);
+  vector<Node*> copyChildren(children_);
+  for (auto n : copyChildren) {
+    n->spill(pageSize, fillPercent, pageFree, pageAlloc);
   }
 
   // clear children
+  releaseMemOfNode(children_);
   children_.clear();
 
   for (auto n : split(pageSize, fillPercent)) {
@@ -383,7 +375,6 @@ Node* Node::spill(size_t pageSize, double fillPercent, PageFree& pageFree, PageA
     
     n->pageID_ = page->id();
     n->writePage(page);
-    n->spilled_ = true;
 
     if (n->parent_ != nullptr) {
       if (n->key_ == "") {
@@ -396,9 +387,11 @@ Node* Node::spill(size_t pageSize, double fillPercent, PageFree& pageFree, PageA
 
   // root node spilted, so new root generated, do store it
   if (parent_ != nullptr && parent_->pageID_ == 0) {
+    Node* p = parent_;
+    releaseMemOfNode(p->children_);
     // avoid spill children again
-    parent_->children_.clear();
-    return parent_->spill(pageSize, fillPercent, pageFree, pageAlloc);
+    p->children_.clear();
+    return p->spill(pageSize, fillPercent, pageFree, pageAlloc);
   }
 
   return this;
