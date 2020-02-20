@@ -22,7 +22,7 @@ struct MockPageAlloc: public PageAlloc {
     char* buf = new char[count * sz];
     bufs.push_back(shared_ptr<char>(buf, [](char* b) {delete[] b;}));
 
-    Page* p = new (buf) Page(nextPageID++, count -1);
+    Page* p = new (buf) Page(nextPageID++, static_cast<uint32_t>(count - 1));
     alloced[p->id()] = p;
 
     return p;

@@ -7,7 +7,7 @@
 #include <iostream>
 namespace dbwheel {
 
-std::ostream& debug = std::cout;
+static std::ostream& debug = std::cout;
 
 }  // namespace dbwheel
 

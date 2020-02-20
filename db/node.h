@@ -22,8 +22,8 @@ struct inode;
 class Node {
  public:
   Node(): Node(nullptr, 0, false) {}
-  Node(Node* parent, uint64_t pageID, bool isLeaf): parent_(parent), pageID_(pageID), isLeaf_(isLeaf), spilled_(false) {}
-  Node(const vector<inode*>& inodes, bool isLeaf): parent_(nullptr), inodes_(inodes), isLeaf_(isLeaf), spilled_(false) {}
+  Node(Node* parent, uint64_t pageID, bool isLeaf): parent_(parent), pageID_(pageID), isLeaf_(isLeaf) {}
+  Node(const vector<inode*>& inodes, bool isLeaf): parent_(nullptr), inodes_(inodes), isLeaf_(isLeaf) {}
   ~Node();
 
   vector<Node*> split(size_t pageSize, double fillPercent);

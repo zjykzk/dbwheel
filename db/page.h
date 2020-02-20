@@ -13,13 +13,17 @@ struct branchPageElement;
 
 struct leafPageElement;
 
+struct Meta;
+
 class Page {
  public:
-  Page(uint16_t id, uint32_t overflow): id_(id), overflow_(overflow) {}
+  Page(uint64_t id, uint32_t overflow): id_(id), overflow_(overflow) {}
+  Page(uint64_t id, uint16_t flags): id_(id), flags_(flags), count_(0) {}
   const uint64_t id() { return id_; }
 
  private:
   friend class Node;
+  friend class DBImpl;
 
   const std::string type();
 
@@ -40,6 +44,10 @@ class Page {
   }
 
   inline leafPageElement* leafPageElementOf(uint16_t index);
+
+  Meta* meta() {
+    return reinterpret_cast<Meta*>(this->ptr_);
+  }
 
   uint64_t id_;
   uint16_t flags_;
