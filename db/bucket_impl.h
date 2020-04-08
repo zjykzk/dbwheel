@@ -20,12 +20,18 @@ struct bucket {
 };
 
 class BucketImpl : public Bucket {
+
+  class DBImpl;
+
  public:
-  void put(const std::string& k, const std::string& v) override;
-  void get(const std::string& k) override;
-  void del(const std::string& k) override;
+
+  Status put(const std::string& k, const std::string& v) override;
+  Status get(const std::string& k, std::string* v) override;
+  Status del(const std::string& k) override;
 
  private:
+  bucket bucket_;
+  DBImpl* db_;
 };
 
 }  // namespace dbwheel

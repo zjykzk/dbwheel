@@ -181,13 +181,13 @@ void Node::readPage(Page* page) {
 
   if (isLeaf_) {
     auto e = page->leafPageElements();
-    for (int i = 0; i < c; i++, e++) {
+    for (uint32_t i = 0; i < c; i++, e++) {
       inodes_.push_back(new inode{e->flags, page->id(), e->key(), e->value()});
     }
     return;
   }
   auto e = page->branchPageElements();
-  for (int i = 0; i < c; i++, e++) {
+  for (uint32_t i = 0; i < c; i++, e++) {
     inodes_.push_back(new inode{0/*ignore*/, e->pageID, e->key()});
   }
 }

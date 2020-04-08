@@ -3,6 +3,8 @@
 #ifndef DB_NODE_CACHE_H_
 #define DB_NODE_CACHE_H_
 
+#include <cstdint>
+
 namespace dbwheel {
 
 class Node;

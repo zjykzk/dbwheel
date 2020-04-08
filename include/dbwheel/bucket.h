@@ -5,13 +5,15 @@
 
 #include <string>
 
+#include "include/dbwheel/status.h"
+
 namespace dbwheel {
 
 class Bucket {
  public:
-  virtual void put(const std::string& k, const std::string& v) = 0;
-  virtual void get(const std::string& k) = 0;
-  virtual void del(const std::string& k) = 0;
+  virtual Status put(const std::string& k, const std::string& v) = 0;
+  virtual Status get(const std::string& k, std::string* v) = 0;
+  virtual Status del(const std::string& k) = 0;
 };
 
 }  // namespace dbwheel

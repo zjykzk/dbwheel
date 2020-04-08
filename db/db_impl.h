@@ -11,12 +11,11 @@
 
 namespace dbwheel {
 
-class Meta;
+struct Meta;
 class Page;
 
 class DBImpl : public DB {
  public:
-
   DBImpl(const Options& options, const std::string& dbname):
     name_(dbname),
     options_(options),

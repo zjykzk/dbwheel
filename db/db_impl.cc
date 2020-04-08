@@ -207,7 +207,7 @@ Status DBImpl::mmapFile() {
   }
 
   uint64_t size = sb.st_size;
-  if (size < options_.initialMmapSize) {
+  if (size < (uint64_t) options_.initialMmapSize) {
     size = options_.initialMmapSize;
   }
 
@@ -240,7 +240,7 @@ Status DBImpl::mmapFile() {
 std::pair<uint64_t, Status> DBImpl::mmapSize(uint64_t size) {
 
   for (uint64_t i = 15; i <= 30; i++) {
-    if (size < 1 << i) {
+    if (size < (uint64_t)1 << i) {
       return std::make_pair(1<<i, Status::OK());
     }
   }

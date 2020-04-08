@@ -3,6 +3,8 @@
 #ifndef DB_PAGE_ALLOC_H_
 #define DB_PAGE_ALLOC_H_
 
+#include <cstddef>
+
 namespace dbwheel {
 
 class Page;

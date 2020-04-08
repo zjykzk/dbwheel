@@ -1,21 +1,22 @@
 // Copyright (c) 2020
 //
-#include "include/dbwheel/bucket_impl.h"
+#include "db/bucket_impl.h"
 
 namespace dbwheel {
 
-void BucketImpl::put(const std::string& k, const std::string& v) {
+Status BucketImpl::put(const std::string& k, const std::string& v) {
   // TODO
+  return Status::OK();
 }
 
-void BucketImpl::get(const std::string& k) {
+Status BucketImpl::get(const std::string& k, std::string* v) {
   // TODO
+  return Status::OK();
 }
 
-void BucketImpl::del(const std::string& k) {
+Status BucketImpl::del(const std::string& k) {
   // TODO
+  return Status::OK();
 }
 
 }  // namespace dbwheel
-
-#endif  // DB_BUCKET_IMPL_H

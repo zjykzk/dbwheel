@@ -12,7 +12,6 @@ std::string Status::toString() const {
   switch (code_) {
     case kOk:
       return "ok";
-      break;
     case kIOError:
       s << "ioerror:";
       break;

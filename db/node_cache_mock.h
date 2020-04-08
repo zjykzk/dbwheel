@@ -4,6 +4,7 @@
 #define DB_NODE_CACHE_MOCK_H_
 
 #include <map>
+#include "db/node_cache.h"
 
 namespace dbwheel {
 

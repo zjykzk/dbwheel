@@ -57,7 +57,7 @@ class Node {
   const string& key() const;
   inode* del0(const string& key);
 
-  int minKeys() { return isLeaf_ ? 1 : 2; }
+  size_t minKeys() { return isLeaf_ ? 1 : 2; }
 
   const string toString();
 

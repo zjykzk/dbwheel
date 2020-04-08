@@ -4,6 +4,7 @@
 #define DB_PAGE_ALLOC_MOCK_H_
 
 #include <map>
+#include <vector>
 #include <memory>
 
 #include "db/page.h"
@@ -12,9 +13,9 @@
 namespace dbwheel {
 
 using std::shared_ptr;
+using std::vector;
 
 struct MockPageAlloc: public PageAlloc {
-
   MockPageAlloc(uint64_t nextPageID): nextPageID(nextPageID) {}
 
   Page* alloc(size_t sz, size_t count) {

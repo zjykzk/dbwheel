@@ -3,6 +3,8 @@
 #ifndef DB_PAGE_FREE_H_
 #define DB_PAGE_FREE_H_
 
+#include <cstdint>
+
 namespace dbwheel {
 
 struct PageFree {

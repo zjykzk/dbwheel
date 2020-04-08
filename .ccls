@@ -1,9 +1,10 @@
 clang++
 -I.
 -I/usr/include/c++/9.2.0
+-I/usr/include/c++/9.3.0
 -I./third_party/googletest/googletest/include
--stdlib=libc++
+-stdlib=libstdc++
 -fPIC
 %h -x
 %h c++-header
-%cpp -std=c++11
+%cpp -std=c++17

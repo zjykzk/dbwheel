@@ -1,4 +1,4 @@
-OPT=-g -I./ -I/usr/include/c++/9.2.0 -fPIC -std=c++11 -Werror
+OPT=-g -I./ -I/usr/include/c++/9.3.0 -fPIC -std=c++17 -Werror
 OPT_TEST=$(OPT) -I./third_party/googletest/googletest/include
 LINK_TEST=./third_party/googletest/googletest/build/lib/libgtest.a -lpthread
 CXX=g++
@@ -45,7 +45,7 @@ test_db: db_test.o main_test.o $(OBJECTS)
 main_test.o: db/main_test.cc
 	$(CXX) $(OPT_TEST) -c -o main_test.o db/main_test.cc
 
-run_all_test: $(OBJECTS)
+run_all_test: $(OBJECTS) $(TEST_OBJECTS)
 	$(CXX) -o $(MAIN_TEST) $(ALL_OBJECTS) $(LINK_TEST)
 	./$(MAIN_TEST)
 
